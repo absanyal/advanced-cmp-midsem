@@ -7,11 +7,13 @@
 
 using namespace std;
 
-double psi(int i, double y);
-double integrate_y(double (*func)(double, int, int, int, int), int l, int p, int n, int q ); //func = v_d/_ex
-double integrate_x(double y, double (*func_x)(double, double,int, int), int l, int n); //func_x= v_x
-double v_x(double x, double y, int a, int b);
-double v_d(double y, int l, int p, int n, int q);
-double v_ex(double y, int l, int p, int n, int q);
+long double psi(int i, long double y);
+long double integrate_y(long double (*func)(long double, int, int, int, int), int l, int p, int n, int q ); //func = v_d/_ex
+long double integrate_x(long double y, long double (*func_x)(long double, long double,int, int), int l, int n); //func_x= v_x
+long double v_x(long double x, long double y, int a, int b);
+long double v_d(long double y, int l, int p, int n, int q);
+long double v_ex(long double y, int l, int p, int n, int q);
+string current_time_str(void);
+void load_array_from_file(long double**** direct,long double**** exchange, ifstream& din, ifstream& ein);
 
 #endif
