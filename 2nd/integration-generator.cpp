@@ -24,7 +24,7 @@ int main()
   int l,p,n,q;
   cout << "Enter l,p,n,q: ";
   cin >> l >> p >> n >>  q;
-  cout << "epsilon= " << epsilon << " \n" << "Direct Energy= " << integrate_y(&v_d,l, p, n,q) << endl;
-  cout << "Exchange Energy= " << integrate_y(&v_ex, l,p ,n,q) << endl;
-
+  // cout << "epsilon= " << epsilon << " \n" << "Direct Energy= " << integrate_y(&v_d,l, p, n,q) << endl;
+  // cout << "Exchange Energy= " << integrate_y(&v_ex, l,p ,n,q) << endl;
+  cout << "Diff =" <<  integrate_y(&v_d,l, p, n,q)- integrate_y(&v_ex,l, p, n,q) << endl;
 }

@@ -1,6 +1,6 @@
 #include <iostream>
 #include <cmath>
-#include "common.h"
+#include "common-globals.h"
 
 using namespace std;
 
