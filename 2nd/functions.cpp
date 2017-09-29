@@ -1,15 +1,8 @@
 #include <iostream>
 #include <cmath>
-#include <fstream>
-
+#include "common.h"
 
 using namespace std;
-
-double alpha, omega, mass;
-int number_of_mesh; double epsilon;
-double offset = 1e-4;
-double low_lim = -M_PI/2+offset;
-double up_lim = M_PI/2-offset;
 
 double psi(int i, double y);
 double integrate_y(double (*func)(double, int, int, int, int), int l, int p, int n, int q ); //func = v_d/_ex
