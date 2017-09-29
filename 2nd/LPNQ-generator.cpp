@@ -9,13 +9,6 @@ using namespace std;
 ofstream dout;
 ofstream eout;
 
-long double alpha, omega;
-long double mass=1;
-int number_of_mesh; long double epsilon;
-long double offset = 1e-4;
-long double low_lim = -M_PI/2+offset;
-long double up_lim = M_PI/2-offset;
-
 int main()
 {
   cout << "Enter the no of mesh pts: ";
@@ -25,6 +18,9 @@ int main()
   cout << "Enter omega:";
   cin >> omega;
   alpha = sqrt(omega); //In natural units with hbar=1.
+
+  // cout <<  integrate_y(&v_d,0,1,2,1) << endl;
+  // cout <<  integrate_y(&v_ex,0,1,2,1) << endl;
 
   string filename;
   filename = "direct_omega="+to_string(omega)+"mesh="+to_string(number_of_mesh)+current_time_str(); dout.open(filename);
@@ -42,9 +38,7 @@ int main()
           eout <<  integrate_y(&v_ex,l, p, n,q) << endl;
         }
       }
-      cout << "p=" << p << "is done!";
-    }
-    cout << "l=" << l << "is done!";
-  }
+     }
+   }
 
 }

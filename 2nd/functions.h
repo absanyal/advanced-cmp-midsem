@@ -14,6 +14,6 @@ long double v_x(long double x, long double y, int a, int b);
 long double v_d(long double y, int l, int p, int n, int q);
 long double v_ex(long double y, int l, int p, int n, int q);
 string current_time_str(void);
-void load_array_from_file(long double**** direct,long double**** exchange, ifstream& din, ifstream& ein);
+void load_array_from_file(long double direct[][3][3][3],long double exchange[][3][3][3], ifstream& din, ifstream& ein);
 
 #endif

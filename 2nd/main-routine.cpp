@@ -7,9 +7,11 @@
 #include "functions.h"
 
 using namespace std;
+using namespace Eigen;
 
 ifstream din("direct.txt");
 ifstream ein("exchange.txt");
+
 
 int main()
 {
@@ -17,4 +19,7 @@ int main()
   long double exchange[3][3][3][3];
 
   load_array_from_file(direct,exchange,din,ein);
+
+  MatrixXd F = MatrixXd::Zero(3,3);
+
 }

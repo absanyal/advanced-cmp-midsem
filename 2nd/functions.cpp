@@ -5,6 +5,13 @@
 
 using namespace std;
 
+long double alpha, omega;
+long double mass=1;
+int number_of_mesh; long double epsilon;
+long double offset = 1e-4;
+long double low_lim = -M_PI/2+offset;
+long double up_lim = M_PI/2-offset;
+
 long double psi(int i, long double y);
 long double integrate_y(long double (*func)(long double, int, int, int, int), int l, int p, int n, int q ); //func = v_d/_ex
 long double integrate_x(long double y, long double (*func_x)(long double, long double,int, int), int l, int n); //func_x= v_x
@@ -12,7 +19,7 @@ long double v_x(long double x, long double y, int a, int b);
 long double v_d(long double y, int l, int p, int n, int q);
 long double v_ex(long double y, int l, int p, int n, int q);
 string current_time_str(void);
-void load_array_from_file(long double**** direct,long double**** exchange, ifstream& din, ifstream& ein);
+void load_array_from_file(long double direct[][3][3][3],long double exchange[][3][3][3], ifstream& din, ifstream& ein);
 
 long double psi(int i, long double y)
 {
@@ -90,7 +97,7 @@ string current_time_str(void)
   return str;
 }
 
-void load_array_from_file(long double**** direct,long double**** exchange, ifstream& din, ifstream& ein)
+void load_array_from_file(long double direct[][3][3][3],long double exchange[][3][3][3], ifstream& din, ifstream& ein)
 {
   for(int l=0;l<3;l++)
   {
