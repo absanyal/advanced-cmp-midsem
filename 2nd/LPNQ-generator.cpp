@@ -13,14 +13,11 @@ int main()
 {
   cout << "Enter the no of mesh pts: ";
   cin >> number_of_mesh;
-  epsilon = 1/(float(number_of_mesh)*2.);
+  epsilon = 1/(double(number_of_mesh)*2.);
 
   cout << "Enter omega:";
   cin >> omega;
   alpha = sqrt(omega); //In natural units with hbar=1.
-
-  // cout <<  integrate_y(&v_d,0,1,2,1) << endl;
-  // cout <<  integrate_y(&v_ex,0,1,2,1) << endl;
 
   string filename;
   filename = "direct_omega="+to_string(omega)+"mesh="+to_string(number_of_mesh)+current_time_str(); dout.open(filename);
