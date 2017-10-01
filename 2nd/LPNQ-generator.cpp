@@ -2,34 +2,38 @@
 #include <cmath>
 #include <fstream>
 #include <string>
-#include "common-globals.h"
-#include "functions.h"
+#include "common_globals.h"
+#include "functions_squarewell.h"
 
 using namespace std;
+
 ofstream dout;
 ofstream eout;
+ofstream fout;
+const int N6=3;
 
 int main()
 {
   cout << "Enter the no of mesh pts: ";
   cin >> number_of_mesh;
   epsilon = 1/(double(number_of_mesh)*2.);
+  string filename;
 
   cout << "Enter omega:";
   cin >> omega;
-  alpha = sqrt(omega); //In natural units with hbar=1.
+  alpha = sqrt(omega); //(In natural units with hbar=1.)
 
-  string filename;
-  filename = "direct_omega="+to_string(omega)+"mesh="+to_string(number_of_mesh)+current_time_str(); dout.open(filename);
-  filename = "exchange_omega="+to_string(omega)+"mesh="+to_string(number_of_mesh)+current_time_str(); eout.open(filename);
+  createfilename(filename,"direct",number_of_mesh,omega); dout.open(filename);
+  createfilename(filename,"exchange",number_of_mesh,omega); eout.open(filename);
+  createfilename(filename,"matrixelems",number_of_mesh,omega); fout.open(filename);
 
-  for(int l=0;l<3;l++)
+  for(int l=0;l<N6;l++)
   {
-    for(int p=0; p<3; p++)
+    for(int p=0; p<N6; p++)
     {
-      for(int n=0; n<3; n++)
+      for(int n=0; n<N6; n++)
       {
-        for(int q=0; q<3; q++)
+        for(int q=0; q<N6; q++)
         {
           dout <<  integrate_y(&v_d,l, p, n,q) << endl;
           eout <<  integrate_y(&v_ex,l, p, n,q) << endl;
@@ -37,5 +41,7 @@ int main()
       }
      }
    }
+
+   generate_lhn_matrix(omega, fout);
 
 }
