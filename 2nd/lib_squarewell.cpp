@@ -90,7 +90,7 @@ string current_time_str(void)
   char buffer[80];
   time (&rawtime);
   timeinfo = localtime(&rawtime);
-  strftime(buffer,sizeof(buffer),'%Y-%m-%d-%I-%M-%S',timeinfo);
+  strftime(buffer,sizeof(buffer),"%Y-%m-%d-%I-%M-%S",timeinfo);
   string str(buffer);
   return str;
 }
