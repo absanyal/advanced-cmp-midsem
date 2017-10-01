@@ -4,17 +4,17 @@
 #include <Eigen/Dense>
 #include <complex>
 #include "common_globals.h"
-#include "functions_squarewell.h"
+#include "functions.h"
 
 using namespace std;
 using namespace Eigen;
 
 typedef std::complex <long double> cd;
 
-// ifstream din("data/direct.txt");
-// ifstream ein("data/exchange.txt");
-ifstream din("direct_square_well.txt");
-ifstream ein("exchange_square_well.txt");
+ifstream din("direct.txt");
+ifstream ein("exchange.txt");
+// ifstream din("direct_square_well.txt");
+// ifstream ein("exchange_square_well.txt");
 ifstream fin("matrixelems.txt");
 
 const int N3=3;
@@ -69,5 +69,8 @@ int main()
     cout  << ces.eigenvalues().real().transpose() << endl;
   }
 
+  din.close();
+  ein.close();
+  fin.close();
 
 }

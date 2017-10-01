@@ -3,7 +3,7 @@
 #include <fstream>
 #include <string>
 #include "common_globals.h"
-#include "functions_squarewell.h"
+#include "functions.h"
 
 using namespace std;
 
@@ -43,5 +43,9 @@ int main()
    }
 
    generate_lhn_matrix(omega, fout);
+
+   dout.close();
+   eout.close();
+   fout.close();
 
 }

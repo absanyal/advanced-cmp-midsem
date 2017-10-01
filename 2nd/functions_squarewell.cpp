@@ -169,7 +169,7 @@ void generate_lhn_matrix(long double omega, ofstream& fout)
     {
       int l=i+1; int n=j+1;
       long double ld= pow(omega,2)*integrate_x2(integrand,l,n)+ double(2*n*n)*delta(l,n);
-      fout << ld;
+      fout << ld << endl;
     }
   }
 }
