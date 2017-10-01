@@ -90,14 +90,14 @@ string current_time_str(void)
   char buffer[80];
   time (&rawtime);
   timeinfo = localtime(&rawtime);
-  strftime(buffer,sizeof(buffer),"%S-%M-%I-%Y-%m-%d",timeinfo);
+  strftime(buffer,sizeof(buffer),'%Y-%m-%d-%I-%M-%S',timeinfo);
   string str(buffer);
   return str;
 }
 
 void createfilename(string& filename, string option, int number_of_mesh, long double omega)
 {
-  filename = "data/"+option+"_square_well(a=1,mesh="+to_string(number_of_mesh)+current_time_str()+".txt";
+  filename = "data/"+option+"_square_well(a=1,mesh="+to_string(number_of_mesh)+","+current_time_str()+").txt";
 }
 
 void load_array_from_file(long double direct[][N1][N1][N1],long double exchange[][N1][N1][N1], ifstream& din, ifstream& ein)

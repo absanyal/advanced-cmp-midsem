@@ -99,14 +99,14 @@ string current_time_str(void)
   char buffer[80];
   time (&rawtime);
   timeinfo = localtime(&rawtime);
-  strftime(buffer,sizeof(buffer),"%S-%M-%I-%Y-%m-%d",timeinfo);
+  strftime(buffer,sizeof(buffer),'%Y-%m-%d-%I-%M-%S',timeinfo);
   string str(buffer);
   return str;
 }
 
 void createfilename(string& filename, string option, int number_of_mesh, long double omega)
 {
-  filename ="data/"+option+"_omega="+to_string(int(omega))+" ,mesh="+to_string(number_of_mesh)+current_time_str()+".txt";
+  filename ="data/"+option+"_harmonic(omega="+to_string(int(omega))+" ,mesh="+to_string(number_of_mesh)+","+current_time_str()+").txt";
 }
 
 void load_array_from_file(long double direct[][N4][N4][N4],long double exchange[][N4][N4][N4], ifstream& din, ifstream& ein)
