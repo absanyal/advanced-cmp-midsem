@@ -13,9 +13,10 @@ typedef std::complex <long double> cd;
 
 ifstream din("direct.txt");
 ifstream ein("exchange.txt");
+ifstream fin("matrixelems.txt");
 // ifstream din("direct_square_well.txt");
 // ifstream ein("exchange_square_well.txt");
-ifstream fin("matrixelems.txt");
+// ifstream fin("matrixelems_square_well.txt");
 
 const int N3=3;
 
