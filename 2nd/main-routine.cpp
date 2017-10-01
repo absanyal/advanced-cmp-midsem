@@ -11,13 +11,6 @@ using namespace Eigen;
 
 typedef std::complex <long double> cd;
 
-ifstream din("direct.txt");
-ifstream ein("exchange.txt");
-ifstream fin("matrixelems.txt");
-// ifstream din("direct_square_well.txt");
-// ifstream ein("exchange_square_well.txt");
-// ifstream fin("matrixelems_square_well.txt");
-
 const int N3=3;
 
 long double direct_energy[N3][N3][N3][N3];
@@ -42,8 +35,29 @@ cd LPNQ(int l, int n, MatrixXcd C)
 
 int main()
 {
-  cout << "Enter omega: ";
-  cin >> omega;
+  int choice;
+  cout << "Start with Harmonic Basis States(1) or Square Well Basis States(2): ";
+  cin >> choice;
+
+  ifstream din, ein, fin;
+
+  if(choice==1)
+  {
+    din.open("direct_harmonic.txt");
+    ein.open("exchange_harmonic.txt");
+    fin.open("matrixelems_harmonic.txt");
+  }
+  else if(choice==2)
+  {
+    din.open("direct_square_well.txt");
+    ein.open("exchange_square_well.txt");
+    fin.open("matrixelems_square_well.txt");
+  }
+  else
+  {
+    cout << "Come on! Be professional and stop trolling the program" << endl;
+    exit(1);
+  }
 
   load_array_from_file(direct_energy,exchange_energy,din,ein);
   load_array_from_file(matrixelems,fin);
