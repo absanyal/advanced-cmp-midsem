@@ -47,7 +47,7 @@ int main()
   load_array_from_file(direct_energy,exchange_energy,din,ein);
   load_array_from_file(matrixelems,fin);
 
-  MatrixXcd F = MatrixXd::Zero(N3,N3);
+  MatrixXcd F = MatrixXcd::Zero(N3,N3);
   MatrixXcd C = MatrixXcd::Identity(N3,N3);
 
   for(int master_loop=1; master_loop<10; master_loop++)
