@@ -2,7 +2,10 @@
 #include <cmath>
 #include <fstream>
 #include "common_globals.h"
+#include <boost/math/special_functions/hermite.hpp>
+#include <boost/math/special_functions/factorials.hpp>
 
+using namespace boost::math;
 using namespace std;
 
 long double alpha, omega;
@@ -11,8 +14,9 @@ int number_of_mesh; long double epsilon;
 long double offset = 1e-4;
 long double low_lim = -M_PI/2+offset;
 long double up_lim = M_PI/2-offset;
-const int N4=3;
+const int N4=10;
 
+double fac(int n) {return factorial <double> (n);}
 long double psi(int i, long double y);
 long double integrate_y(long double (*func)(long double, int, int, int, int), int l, int p, int n, int q ); //func = v_d/_ex
 long double integrate_x(long double y, long double (*func_x)(long double, long double,int, int), int l, int n); //func_x= v_x
@@ -25,16 +29,12 @@ void load_array_from_file(long double direct[][N4][N4][N4],long double exchange[
 void load_array_from_file(long double matrixelems[][N4], ifstream& fin);
 void generate_lhn_matrix(long double omega, ofstream& fout);
 
-long double psi(int i, long double y)
+long double psi(int n, long double x)
 {
-  long double x = sqrt(alpha)*y;
-  long double result= pow((alpha/M_PI),0.25)*exp(-x*x/2);
-  if(i==0) return result*1;
-  else if(i==1) return result*sqrt(2)*x;
-  else if(i==2) return result*(2*x*x-1)/sqrt(2);
-  else { cout << "wrong psi called" << endl; exit(1); }
+  long double y = alpha*x;
+  long double result = 1/sqrt(pow(2,n)*fac(n))*sqrt(alpha)/pow(M_PI,0.25)*exp(-y*y/2)*hermite(n,y);
+  return result;
 }
-
 
 long double integrate_y(long double (*func)(long double, int, int, int, int), int l, int p, int n, int q ) //func = v_d/v_ex
 {

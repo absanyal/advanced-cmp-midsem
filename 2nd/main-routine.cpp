@@ -11,7 +11,7 @@ using namespace Eigen;
 
 typedef std::complex <long double> cd;
 
-const int N3=3;
+const int N3=10;
 
 long double direct_energy[N3][N3][N3][N3];
 long double exchange_energy[N3][N3][N3][N3];

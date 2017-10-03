@@ -6,7 +6,7 @@
 #include "common_globals.h"
 
 using namespace std;
-const int N5=3;
+const int N5=10;
 
 long double psi(int i, long double y);
 long double integrate_y(long double (*func)(long double, int, int, int, int), int l, int p, int n, int q ); //func = v_d/_ex

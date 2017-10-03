@@ -10,7 +10,7 @@ long double mass=1;
 int number_of_mesh; long double epsilon;
 long double low_lim = 0;
 long double up_lim = 1;
-const int N1=3;
+const int N1=10;
 
 long double psi(int i, long double y);
 long double integrate_y(long double (*func)(long double, int, int, int, int), int l, int p, int n, int q ); //func = v_d/_ex
