@@ -19,5 +19,7 @@ void createfilename(string& filename, string option, int number_of_mesh, long do
 void load_array_from_file(long double direct[][N5][N5][N5],long double exchange[][N5][N5][N5], ifstream& din, ifstream& ein);
 void load_array_from_file(long double matrixelems[][N5], ifstream& fin);
 void generate_lhn_matrix(long double omega, ofstream& fout);
+long double integrate_x2(long double (*func)(long double, int, int), int l, int n);
+
 
 #endif

@@ -26,7 +26,7 @@ cd LPNQ(int l, int n, MatrixXcd C)
     {
       cd c_sum=0;
       for(int mu=0; mu<N3; mu++)  c_sum += conj(C(mu,p))*C(mu,q);
-      lpnq += c_sum*(direct_energy[l][p][n][q]-exchange_energy[l][p][n][q]);
+      lpnq += c_sum*(2*direct_energy[l][p][n][q]-exchange_energy[l][p][n][q]);
     }
   }
   return lpnq;
@@ -77,11 +77,14 @@ int main()
         F(l,n)=matrixelems[l][n] + LPNQ(l,n,C);
       }
     }
+    // if(master_loop==1)
+    //  cout << "Initial F matrix is:\n"<< F << endl << endl << "and F(0,0) addends are: " << matrixelems[0][0] << " " << LPNQ(0,0,C) << endl;
 
     ComplexEigenSolver <MatrixXcd> ces;
     ces.compute(F);
     C=ces.eigenvectors().transpose();
     cout  << ces.eigenvalues().real().transpose() << endl;
+
   }
 
   din.close();

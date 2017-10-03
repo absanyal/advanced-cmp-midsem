@@ -168,7 +168,7 @@ void generate_lhn_matrix(long double omega, ofstream& fout)
     for(int j=0; j<N1; j++)
     {
       int l=i+1; int n=j+1;
-      long double ld= pow(omega,2)*integrate_x2(integrand,l,n)+ double(2*n*n)*delta(l,n);
+      long double ld= 2*pow(omega,2)*integrate_x2(integrand,l,n)+ double(0.5*pow(n,2))*pow(M_PI,2)*delta(l,n);
       fout << ld << endl;
     }
   }
