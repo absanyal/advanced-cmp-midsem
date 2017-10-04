@@ -29,7 +29,7 @@ int main()
   // createfilename(filename,"direct",number_of_mesh,omega); dout.open(filename);
   // createfilename(filename,"exchange",number_of_mesh,omega); eout.open(filename);
   // createfilename(filename,"matrixelems",number_of_mesh,omega); fout.open(filename);
-
+  //
   // for(int l=0;l<N6;l++)
   // {
   //   for(int p=0; p<N6; p++)

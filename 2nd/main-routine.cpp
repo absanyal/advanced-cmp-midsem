@@ -3,6 +3,7 @@
 #include <fstream>
 #include <Eigen/Dense>
 #include <complex>
+#include <sstream>
 #include "common_globals.h"
 #include "functions.h"
 
@@ -11,33 +12,49 @@ using namespace Eigen;
 
 typedef std::complex <long double> cd;
 
-const int N3=10;
+const int Nb=10;
+const int N=2;
 
-long double direct_energy[N3][N3][N3][N3];
-long double exchange_energy[N3][N3][N3][N3];
-long double matrixelems[N3][N3];
+long double direct_energy[Nb][Nb][Nb][Nb];
+long double exchange_energy[Nb][Nb][Nb][Nb];
+long double matrixelems[Nb][Nb];
 
 cd LPNQ(int l, int n, MatrixXcd C)
 {
   cd lpnq;
-  for(int p=0; p<N3; p++)
+  for(int p=0; p<Nb; p++)
   {
-    for(int q=0; q<N3; q++)
+    for(int q=0; q<Nb; q++)
     {
       cd c_sum=0;
-      for(int mu=0; mu<N3; mu++)  c_sum += conj(C(mu,p))*C(mu,q);
+      for(int mu=0; mu<N; mu++)  c_sum += conj(C(mu,p))*C(mu,q);
       lpnq += c_sum*(2*direct_energy[l][p][n][q]-exchange_energy[l][p][n][q]);
     }
   }
   return lpnq;
 }
 
+bool compare(const pair<double, VectorXcd>&i, const pair<double, VectorXcd>&j) {return i.first < j.first;}
 
-int main()
+double filter(double x) {if(x<1e-3) return 0.0; else return x;}
+
+VectorXcd filter(VectorXcd v)
 {
-  int choice;
-  cout << "Start with Harmonic Basis States(1) or Square Well Basis States(2): ";
-  cin >> choice;
+  VectorXcd v_filtered(v.size());
+  for(int i=0; i<v.size(); i++)
+  {
+    v_filtered(i).real(filter(v(i).real()));
+    v_filtered(i).imag(filter(v(i).imag()));
+  }
+  return v_filtered;
+}
+
+int main(int argc, char* argv[])
+{
+
+  if(argc !=2) {cout << "pass proper arguments to main()\n"; exit(1);}
+  istringstream ss(argv[1]); int choice;
+  if (!(ss >> choice)) cerr << "Invalid number " << argv[1] << '\n';
 
   ifstream din, ein, fin;
 
@@ -62,30 +79,41 @@ int main()
   load_array_from_file(direct_energy,exchange_energy,din,ein);
   load_array_from_file(matrixelems,fin);
 
-  MatrixXcd F = MatrixXcd::Zero(N3,N3);
-  MatrixXcd C = MatrixXcd::Identity(N3,N3);
+  MatrixXcd F = MatrixXcd::Zero(Nb,Nb);
+  MatrixXcd C = MatrixXcd::Zero(N,Nb);
+  MatrixXcd Cn= MatrixXcd::Zero(N,Nb);
+  int number_of_loops;
+  cout << "Enter the number_of_loops: "; cin >> number_of_loops;
+  
+for(int master_loop=1; master_loop<number_of_loops; master_loop++)
+{
+  cout << "Loop-" << master_loop << ": " << endl << "----------------------\n";
 
-  for(int master_loop=1; master_loop<10; master_loop++)
+  for(int l=0; l<Nb; l++)
   {
-    cout << "Loop-" << master_loop << ": " << endl << "----------------------\n";
-    cout << C << endl << endl;
-
-    for(int l=0; l<N3; l++)
+    for(int n=0; n<Nb; n++)
     {
-      for(int n=0; n<N3; n++)
-      {
-        F(l,n)=matrixelems[l][n] + LPNQ(l,n,C);
-      }
+      F(l,n)=matrixelems[l][n] + LPNQ(l,n,C);
     }
-    // if(master_loop==1)
-    //  cout << "Initial F matrix is:\n"<< F << endl << endl << "and F(0,0) addends are: " << matrixelems[0][0] << " " << LPNQ(0,0,C) << endl;
-
-    ComplexEigenSolver <MatrixXcd> ces;
-    ces.compute(F);
-    C=ces.eigenvectors().transpose();
-    cout  << ces.eigenvalues().real().transpose() << endl;
-
   }
+
+  ComplexEigenSolver <MatrixXcd> ces; ces.compute(F);
+  vector < pair<double,VectorXcd> > eigenspectrum;
+
+  for(int i=0; i<Nb; i++)
+    eigenspectrum.push_back(make_pair(filter(ces.eigenvalues().real()[i]),filter(ces.eigenvectors().col(i))));
+
+  sort(eigenspectrum.begin(),eigenspectrum.end(),compare);
+  eigenspectrum.resize(N);
+
+  for(int i=0; i<N; i++)
+  {
+    C.row(i) = eigenspectrum[i].second.transpose()*0.75+ C.row(i)*0.25;
+    cout << eigenspectrum[i].first << " \t ";
+  }
+  cout << endl;
+  cout << C.real() << endl << endl;
+}
 
   din.close();
   ein.close();

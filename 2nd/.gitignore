@@ -3,3 +3,4 @@ test*
 !*.cpp
 !*.h
 !.gitignore
+!*.sh
