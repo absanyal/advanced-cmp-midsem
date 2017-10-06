@@ -84,7 +84,7 @@ int main(int argc, char* argv[])
   MatrixXcd Cn= MatrixXcd::Zero(N,Nb);
   int number_of_loops;
   cout << "Enter the number_of_loops: "; cin >> number_of_loops;
-  
+
 for(int master_loop=1; master_loop<number_of_loops; master_loop++)
 {
   cout << "Loop-" << master_loop << ": " << endl << "----------------------\n";
@@ -115,6 +115,9 @@ for(int master_loop=1; master_loop<number_of_loops; master_loop++)
   cout << C.real() << endl << endl;
 }
 
+  cout << "Final Fock Matrix: \n";
+
+  cout << F.real() << endl << endl;
   din.close();
   ein.close();
   fin.close();
