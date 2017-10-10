@@ -11,7 +11,7 @@ using namespace std::chrono;
 using namespace Eigen;
 using namespace boost::math;
 
-const int N = 500;
+const int N = 200;
 const int number_of_mesh=100;
 const double a = 1;
 double low_lim = -4;
@@ -103,6 +103,11 @@ double integrate_rho(double r, double (*func_x)(double, double))
 
 int main()
 {
+  // ofstream fout("check_state.txt");
+  //
+  // for(float x=-4; x<4; x+=0.01)
+  //   fout << x << " " << psi(0,x) << " " << psi(1,x) << endl;
+
   int no_of_loops;
   cout << "Enter the no_of_loops: ";
   cin >> no_of_loops;
@@ -118,15 +123,16 @@ int main()
 
   MatrixXcd H = MatrixXcd::Zero(N,N);
 
-  for(int i=0; i<N; i++)
+  for(int i=0; i<N-1; i++)
   {
       cout.flush();
-      int j = (i==N-1)? 0 : i+1;
-      cout << i << " " << j << endl;
-      H(i,j)= -1/(2*dx*dx);
-      H(j,i)= -1/(2*dx*dx);
-      H(i,i) = 1/(dx*dx)+ V(point(i)) + integrate_rho(point(i),&integrand);
+      //int j = (i==N-1)? 0 : i+1;
+      //cout << i << " " << j << endl;
+      H(i,i+1)= -1/(2*dx*dx);
+      H(i+1,i)= -1/(2*dx*dx);
+      H(i,i) = 1/(dx*dx)+ V(point(i)); // + integrate_rho(point(i),&integrand);
   }
+  H(N-1,N-1)=1/(dx*dx)+ V(point(N-1));
 
   ComplexEigenSolver <MatrixXcd> ces;
 
