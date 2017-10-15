@@ -11,7 +11,7 @@ using namespace std::chrono;
 using namespace Eigen;
 using namespace boost::math;
 
-const int N = 200;
+const int N = 5;
 const int number_of_mesh=100;
 const double a = 1;
 double low_lim = -4;
@@ -20,7 +20,7 @@ double dx = (up_lim - low_lim)/double(N);
 const double omega=1;
 double alpha = 1/sqrt(omega);
 const int no_of_states = 10;
-double h = (up_lim - low_lim)/double(N-1);
+double h = (up_lim - low_lim)/double(N);
 
 VectorXd point(N); MatrixXcd states(N,no_of_states);
 
@@ -101,6 +101,29 @@ double integrate_rho(double r, double (*func_x)(double, double))
   return trapez_sum;
 }
 
+
+void eigenvalues_Mathematica(MatrixXcd Mc, ofstream& fout, string scriptname)
+{
+  int lattice_size = Mc.rows()/2;
+  fout.open(scriptname);
+  fout << "#!/usr/local/bin/WolframScript -linewise -script" << endl;
+  fout << "Print[Sort[Eigenvalues[{";
+  for(int i=0; i<2*lattice_size; i++)
+  {
+    fout << "{ ";
+    for(int j=0; j<2*lattice_size; j++)
+      {
+        fout << Mc.real()(i,j) << "+ I (" << Mc.imag()(i,j);
+         if(j==2*lattice_size-1) fout << ") ";
+         else fout << "),";
+      }
+   if(i==2*lattice_size-1) fout << "} ";
+   else fout << "},";
+  }
+  fout << "}],Less]];" << endl;
+  fout.close();
+}
+
 int main()
 {
   // ofstream fout("check_state.txt");
@@ -113,6 +136,9 @@ int main()
   cin >> no_of_loops;
 
   for(int i=0; i<N; i++) {point(i)=low_lim+i*h;}
+  cout << "The points are:\n";
+  for(int i=0; i<N; i++) {cout << point(i) << "\t";}
+  cout << endl;
 
   for(int i=0; i<N; i++)
   {
@@ -123,38 +149,47 @@ int main()
 
   MatrixXcd H = MatrixXcd::Zero(N,N);
 
-  for(int i=0; i<N-1; i++)
+  for(int i=0; i<N; i++)
   {
       cout.flush();
-      //int j = (i==N-1)? 0 : i+1;
-      //cout << i << " " << j << endl;
-      H(i,i+1)= -1/(2*dx*dx);
-      H(i+1,i)= -1/(2*dx*dx);
-      H(i,i) = 1/(dx*dx)+ V(point(i)); // + integrate_rho(point(i),&integrand);
+      int j = (i==N-1)? 0 : i+1;
+      cout << i << " " << j << endl;
+      H(i,j)= -1/(2*dx*dx);
+      H(j,i)= -1/(2*dx*dx);
+      H(i,i) = 1/(dx*dx)+ V(point(i));// + integrate_rho(point(i),&integrand);
   }
-  H(N-1,N-1)=1/(dx*dx)+ V(point(N-1));
+
+  std::cout << "The matrix is:" << '\n';
+  cout << H.real() << endl << endl;
+
+  ofstream mout;
+  eigenvalues_Mathematica(H, mout, "check");
 
   ComplexEigenSolver <MatrixXcd> ces;
+  ces.compute(H);
+  cout << ces.eigenvalues().real().transpose() << endl;
 
-  for(int master_loop=0; master_loop<no_of_loops; master_loop++)
-  {
-    cout << "Loop-" << master_loop << "\n============================\n";
-    milliseconds begin_ms = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
-    ces.compute(H);
-    milliseconds end_ms = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
-    show_time(begin_ms, end_ms);
 
-    vector < pair<double,VectorXcd> > eigenspectrum;
-    for(int i=0; i<N; i++)
-      eigenspectrum.push_back(make_pair(filter(ces.eigenvalues().real()[i]),filter(ces.eigenvectors().col(i))));
-
-    sort(eigenspectrum.begin(),eigenspectrum.end(),compare);
-    eigenspectrum.resize(no_of_states);
-    for(int i=0; i<no_of_states; i++) states.col(i)= eigenspectrum[i].second;
-
-    for(int i=0; i<no_of_states; i++) H(i,i) = 1/(dx*dx) + V(point(i)) + integrate_rho(point(i),&integrand);
-    cout << ces.eigenvalues()[0].real() << "\t" << ces.eigenvalues()[1].real() << endl;
-  }
+    exit(1);
+  // for(int master_loop=0; master_loop<no_of_loops; master_loop++)
+  // {
+  //   cout << "Loop-" << master_loop << "\n============================\n";
+  //   milliseconds begin_ms = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
+  //   ces.compute(H);
+  //   milliseconds end_ms = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
+  //   show_time(begin_ms, end_ms);
+  //
+  //   vector < pair<double,VectorXcd> > eigenspectrum;
+  //   for(int i=0; i<N; i++)
+  //     eigenspectrum.push_back(make_pair(filter(ces.eigenvalues().real()[i]),filter(ces.eigenvectors().col(i))));
+  //
+  //   sort(eigenspectrum.begin(),eigenspectrum.end(),compare);
+  //   eigenspectrum.resize(no_of_states);
+  //   for(int i=0; i<no_of_states; i++) states.col(i)= eigenspectrum[i].second;
+  //
+  //   for(int i=0; i<no_of_states; i++) H(i,i) = 1/(dx*dx) + V(point(i)) + integrate_rho(point(i),&integrand);
+  //   cout << ces.eigenvalues()[0].real() << "\t" << ces.eigenvalues()[1].real() << endl;
+  // }
 }
 
 void show_time(milliseconds begin_ms, milliseconds end_ms)
