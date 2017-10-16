@@ -1,39 +1,62 @@
-#define EIGEN_USE_LAPACKE
+//#define EIGEN_USE_LAPACKE
 
-# include <cstdlib>
-# include <iomanip>
-# include <ctime>
-# include <cstring>
-# include <iostream>
-# include <cmath>
-# include <fstream>
-# include <chrono>
-# include <Eigen/Dense>
-# include <lapacke.h>
+#include <cstdlib>
+#include <iomanip>
+#include <ctime>
+#include <cstring>
+#include <iostream>
+#include <cmath>
+#include <fstream>
+#include <chrono>
+#include <Eigen/Dense>
+#include <lapacke.h>
 
 using namespace std;
 using namespace std::chrono;
 using namespace Eigen;
 
-# include "hermite_polynomial.hpp"
+typedef std::complex <double> cd;
+
+#include "hermite_polynomial.hpp"
+
+bool cEP(MatrixXcd A, VectorXcd& lambda, MatrixXcd& v)
+{
+  int N = A.cols();
+  if (A.rows()!=N)  return false;
+  v.resize(N,N);
+  lambda.resize(N);
+
+  int LDA = A.outerStride();
+  int LDV = v.outerStride();
+  int INFO = 0;
+  cd* w = const_cast<cd*>(lambda.data());
+  char Nchar = 'N';
+  char Vchar = 'V';
+  int LWORK = int(A.size())*4;
+  VectorXcd WORK(LWORK);
+  VectorXd RWORK(2*LDA);
+
+  zgeev_(&Nchar, &Vchar, &N, reinterpret_cast <__complex__ double*> (A.data()), &LDA, reinterpret_cast <__complex__ double*> (w), 0, &LDV, reinterpret_cast <__complex__ double*> (v.data()), &LDV,  reinterpret_cast <__complex__ double*> (WORK.data()), &LWORK, RWORK.data(), &INFO);
+
+  return INFO==0;
+}
 
 
-int N=200;
+int no_of_pts=500;
 const int number_of_mesh=100;
 const double a = 1;
 double low_lim = -4;
 double up_lim = 4;
-double dx = (up_lim - low_lim)/double(N);
+double dx = (up_lim - low_lim)/double(no_of_pts);
 const double omega=1;
 double alpha = 1/sqrt(omega);
-const int no_of_states = 10;
-double h = (up_lim - low_lim)/double(N);
-
-VectorXd point(N); MatrixXcd states(N,no_of_states);
+const int no_of_sps = 10;
+VectorXd point(no_of_pts+1);
+MatrixXcd states(point.size(),no_of_sps);
 
 void show_time(milliseconds begin_ms, milliseconds end_ms);
 double fac(int n) {double prod=1.0; for(int i=n; i>1;i--) prod*=n; return prod;}
-double V(double x) {return pow(omega*x,2);}
+double V(double x) {return 0.5*pow(omega*x,2);}
 
 double hermite(int n, double y)
 {
@@ -69,9 +92,9 @@ VectorXcd filter(VectorXcd v)
 
 double rho_H(double r)
 {
-  int n = (r - low_lim)/h;
+  int n = int((r - low_lim)/dx);
   double rho=0.0;
-  for(int i=0; i< no_of_states; i++)
+  for(int i=0; i< no_of_sps; i++)
   {
     rho += (conj(states(n,i))*states(n,i)).real();
   }
@@ -81,12 +104,12 @@ double rho_H(double r)
 double rho_HF(double r, double r_prime)
 {
   double num=0.0; double denom=0.0;
-  int n = (r - low_lim)/h;
-  int n_prime = (r_prime - low_lim)/h;
+  int n = (r - low_lim)/dx;
+  int n_prime = (r_prime - low_lim)/dx;
 
-  for(int i=0; i< no_of_states; i++)
+  for(int i=0; i< no_of_sps; i++)
   {
-    for(int j=0; j< no_of_states; j++)
+    for(int j=0; j< no_of_sps; j++)
     {
       num += (conj(states(n,i))*states(n,i)*conj(states(n_prime,j))*states(n_prime,j)).real();
     }
@@ -143,70 +166,56 @@ void eigenvalues_Mathematica(MatrixXcd Mc, ofstream& fout, string scriptname)
 
 int main()
 {
-  // ofstream fout("check_state.txt");
-  // for(float x=-4; x<4; x+=0.01)
-  //   fout << x << " " << psi(0,x) << " " << psi(1,x) << endl;
+  // int no_of_loops;
+  // cout << "Enter the no_of_loops: ";
+  // cin >> no_of_loops;
 
-  int no_of_loops;
-  cout << "Enter the no_of_loops: ";
-  cin >> no_of_loops;
-
-  for(int i=0; i<N; i++) {point(i)=low_lim+i*h;}
-  cout << "The points are:\n";
-
-  // for(int i=0; i<N; i++) {cout << point(i) << "\t";}
-  // cout << endl;
-
-  for(int i=0; i<N; i++)
+  for(int i=0; i<= no_of_pts; i++) {point(i)=low_lim+i*dx;}
+  for(int i=0; i< point.size(); i++)
   {
-    for(int j=0; j<no_of_states; j++)
+    for(int j=0; j<no_of_sps; j++)
       states(i,j) = psi(j,point(i));
   }
 
-
-  MatrixXcd H = MatrixXcd::Zero(N,N);
-
-  for(int i=0; i<N; i++)
+  MatrixXcd H = MatrixXcd::Zero(point.size(),point.size());
+  for(int i=0; i<point.size(); i++)
   {
-      cout.flush();
-      int j = (i==N-1)? 0 : i+1;
-      cout << i << " " << j << endl;
+      int j = (i==point.size()-1)? 0 : i+1;
       H(i,j)= -1/(2*dx*dx);
       H(j,i)= -1/(2*dx*dx);
-      H(i,i) = 1/(dx*dx)+ V(point(i));// + integrate_rho(point(i),&integrand);
+      H(i,i) = 1/(dx*dx)+ V(point(i));
   }
 
-  // std::cout << "The matrix is:" << '\n';
-  // cout << H.real() << endl << endl;
+  VectorXcd v; MatrixXcd eigenvectors; VectorXd eigenvalues;
+  int output_states = 2; int master_loop = 0;
+  VectorXd oldeival= VectorXd::Zero(output_states);
+  VectorXd neweival= VectorXd::Zero(output_states);
 
-  // ofstream mout;
-  // eigenvalues_Mathematica(H, mout, "check");
+  for(; ; )
+  {
+    cout << "Loop-" << master_loop << "\n============================\n";
+    milliseconds begin_ms = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
+    cEP(H,v,eigenvectors);
+    milliseconds end_ms = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
+    show_time(begin_ms, end_ms);
 
-  ComplexEigenSolver <MatrixXcd> ces;
-  ces.compute(H);
-  cout << ces.eigenvalues().real().transpose() << endl;
+    eigenvalues = v.real();
+    vector < pair<double,VectorXcd> > eigenspectrum;
+    for(int i=0; i<point.size(); i++)
+      eigenspectrum.push_back(make_pair(filter(eigenvalues(i)),filter(eigenvectors.col(i))));
+    sort(eigenspectrum.begin(),eigenspectrum.end(),compare);
+    eigenspectrum.resize(no_of_sps);
 
+    for(int i=0; i<no_of_sps; i++) states.col(i)= eigenspectrum[i].second;
+    for(int i=0; i<output_states; i++) neweival(i) = eigenspectrum[i].first;
+    cout << neweival.transpose() << endl;
+    double max_deviation = (neweival - oldeival).cwiseAbs().maxCoeff();
+    if(max_deviation < 1e-4) break; else cout << "Deviation = " << max_deviation << endl;
 
-    exit(1);
-  // for(int master_loop=0; master_loop<no_of_loops; master_loop++)
-  // {
-  //   cout << "Loop-" << master_loop << "\n============================\n";
-  //   milliseconds begin_ms = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
-  //   ces.compute(H);
-  //   milliseconds end_ms = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
-  //   show_time(begin_ms, end_ms);
-  //
-  //   vector < pair<double,VectorXcd> > eigenspectrum;
-  //   for(int i=0; i<N; i++)
-  //     eigenspectrum.push_back(make_pair(filter(ces.eigenvalues().real()[i]),filter(ces.eigenvectors().col(i))));
-  //
-  //   sort(eigenspectrum.begin(),eigenspectrum.end(),compare);
-  //   eigenspectrum.resize(no_of_states);
-  //   for(int i=0; i<no_of_states; i++) states.col(i)= eigenspectrum[i].second;
-  //
-  //   for(int i=0; i<no_of_states; i++) H(i,i) = 1/(dx*dx) + V(point(i)) + integrate_rho(point(i),&integrand);
-  //   cout << ces.eigenvalues()[0].real() << "\t" << ces.eigenvalues()[1].real() << endl;
-  // }
+    for(int i=0; i<point.size(); i++) {H(i,i) = 1/(dx*dx) + V(point(i)) + integrate_rho(point(i),&integrand); cout << i << '\r';}
+    for(int i=0; i<oldeival.size(); i++) oldeival(i)= eigenspectrum[i].first;
+    master_loop++;
+  }
 }
 
 void show_time(milliseconds begin_ms, milliseconds end_ms)
