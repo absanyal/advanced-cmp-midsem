@@ -1,17 +1,24 @@
-#include <iostream>
-#include <cmath>
-#include <fstream>
-#include <chrono>
-#include <Eigen/Dense>
-#include <boost/math/special_functions/hermite.hpp>
-#include <boost/math/special_functions/factorials.hpp>
+#define EIGEN_USE_LAPACKE
+
+# include <cstdlib>
+# include <iomanip>
+# include <ctime>
+# include <cstring>
+# include <iostream>
+# include <cmath>
+# include <fstream>
+# include <chrono>
+# include <Eigen/Dense>
+# include <lapacke.h>
 
 using namespace std;
 using namespace std::chrono;
 using namespace Eigen;
-using namespace boost::math;
 
-const int N = 5;
+# include "hermite_polynomial.hpp"
+
+
+int N=200;
 const int number_of_mesh=100;
 const double a = 1;
 double low_lim = -4;
@@ -25,8 +32,18 @@ double h = (up_lim - low_lim)/double(N);
 VectorXd point(N); MatrixXcd states(N,no_of_states);
 
 void show_time(milliseconds begin_ms, milliseconds end_ms);
-double fac(int n) {return factorial <double> (n);}
+double fac(int n) {double prod=1.0; for(int i=n; i>1;i--) prod*=n; return prod;}
 double V(double x) {return pow(omega*x,2);}
+
+double hermite(int n, double y)
+{
+    double x_vec[1];
+    x_vec[0]=y;
+    double* fx2_vec = h_polynomial_value ( 1, n, x_vec );
+    double fx2 = fx2_vec[n];
+    return fx2;
+}
+
 
 long double psi(int n, double x)
 {
@@ -127,7 +144,6 @@ void eigenvalues_Mathematica(MatrixXcd Mc, ofstream& fout, string scriptname)
 int main()
 {
   // ofstream fout("check_state.txt");
-  //
   // for(float x=-4; x<4; x+=0.01)
   //   fout << x << " " << psi(0,x) << " " << psi(1,x) << endl;
 
@@ -137,8 +153,9 @@ int main()
 
   for(int i=0; i<N; i++) {point(i)=low_lim+i*h;}
   cout << "The points are:\n";
-  for(int i=0; i<N; i++) {cout << point(i) << "\t";}
-  cout << endl;
+
+  // for(int i=0; i<N; i++) {cout << point(i) << "\t";}
+  // cout << endl;
 
   for(int i=0; i<N; i++)
   {
@@ -159,11 +176,11 @@ int main()
       H(i,i) = 1/(dx*dx)+ V(point(i));// + integrate_rho(point(i),&integrand);
   }
 
-  std::cout << "The matrix is:" << '\n';
-  cout << H.real() << endl << endl;
+  // std::cout << "The matrix is:" << '\n';
+  // cout << H.real() << endl << endl;
 
-  ofstream mout;
-  eigenvalues_Mathematica(H, mout, "check");
+  // ofstream mout;
+  // eigenvalues_Mathematica(H, mout, "check");
 
   ComplexEigenSolver <MatrixXcd> ces;
   ces.compute(H);
