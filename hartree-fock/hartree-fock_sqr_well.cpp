@@ -1,5 +1,3 @@
-//#define EIGEN_USE_LAPACKE
-
 #include <cstdlib>
 #include <iomanip>
 #include <ctime>
@@ -17,7 +15,7 @@ using namespace Eigen;
 
 typedef std::complex <double> cd;
 
-#include "hermite_polynomial.hpp"
+double Sqr(cd x){return (x*conj(x)).real();}
 
 bool cEP(MatrixXcd A, VectorXcd& lambda, MatrixXcd& v)
 {
@@ -38,46 +36,40 @@ bool cEP(MatrixXcd A, VectorXcd& lambda, MatrixXcd& v)
 
   zgeev_(&Nchar, &Vchar, &N, reinterpret_cast <__complex__ double*> (A.data()), &LDA, reinterpret_cast <__complex__ double*> (w), 0, &LDV, reinterpret_cast <__complex__ double*> (v.data()), &LDV,  reinterpret_cast <__complex__ double*> (WORK.data()), &LWORK, RWORK.data(), &INFO);
 
+  for(int i=0; i<N; i++)
+ 	 v.col(i)=v.col(i)/v.col(i).unaryExpr(&Sqr).sum();
+
   return INFO==0;
 }
 
 
 int no_of_pts=500;
 const int number_of_mesh=100;
-const double a = 1;
-double low_lim = -4;
-double up_lim = 4;
+const double sqr_low_lim = -1.0;
+const double sqr_up_lim = 1.0;
+double a = sqr_up_lim - sqr_low_lim;
+
+double low_lim = -3.0;
+double up_lim = +3.0;
 double dx = (up_lim - low_lim)/double(no_of_pts);
-const double omega=1;
-double alpha = 1/sqrt(omega);
+
 const int no_of_sps = 10;
 VectorXd point(no_of_pts+1);
 MatrixXcd states(point.size(),no_of_sps);
 
 void show_time(milliseconds begin_ms, milliseconds end_ms);
-double fac(int n) {double prod=1.0; for(int i=n; i>1;i--) prod*=n; return prod;}
-double V(double x) {return 0.5*pow(omega*x,2);}
 
-double hermite(int n, double y)
-{
-    double x_vec[1];
-    x_vec[0]=y;
-    double* fx2_vec = h_polynomial_value ( 1, n, x_vec );
-    double fx2 = fx2_vec[n];
-    return fx2;
-}
-
+double V(double x) {return (abs(x)<1)? 0.0: 1000.0;}
 
 long double psi(int n, double x)
 {
-  long double y = alpha*x;
-  long double result = 1/sqrt(pow(2,n)*fac(n))*sqrt(alpha)/pow(M_PI,0.25)*exp(-y*y/2)*hermite(n,y);
-  return result;
+  if(abs(x)>1) return 0;
+  else return (n%2==0)? sqrt(2/a)*sin(n*M_PI*x/(2*a)):sqrt(2/a)*cos(n*M_PI*x/(2*a));
 }
 
 bool compare(const pair<double, VectorXcd>&i, const pair<double, VectorXcd>&j) {return i.first < j.first;}
 
-double filter(double x) {if(x<1e-3) return 0.0; else return x;}
+double filter(double x) {if(abs(x)<1e-3) return 0.0; else return x;}
 
 VectorXcd filter(VectorXcd v)
 {
@@ -141,34 +133,12 @@ double integrate_rho(double r, double (*func_x)(double, double))
   return trapez_sum;
 }
 
-
-void eigenvalues_Mathematica(MatrixXcd Mc, ofstream& fout, string scriptname)
-{
-  int lattice_size = Mc.rows()/2;
-  fout.open(scriptname);
-  fout << "#!/usr/local/bin/WolframScript -linewise -script" << endl;
-  fout << "Print[Sort[Eigenvalues[{";
-  for(int i=0; i<2*lattice_size; i++)
-  {
-    fout << "{ ";
-    for(int j=0; j<2*lattice_size; j++)
-      {
-        fout << Mc.real()(i,j) << "+ I (" << Mc.imag()(i,j);
-         if(j==2*lattice_size-1) fout << ") ";
-         else fout << "),";
-      }
-   if(i==2*lattice_size-1) fout << "} ";
-   else fout << "},";
-  }
-  fout << "}],Less]];" << endl;
-  fout.close();
-}
-
 int main()
 {
-  // int no_of_loops;
-  // cout << "Enter the no_of_loops: ";
-  // cin >> no_of_loops;
+ 	
+  double maxdev;
+  cout << "Enter tolerance: "; cin >> maxdev; 
+
 
   for(int i=0; i<= no_of_pts; i++) {point(i)=low_lim+i*dx;}
   for(int i=0; i< point.size(); i++)
@@ -176,6 +146,11 @@ int main()
     for(int j=0; j<no_of_sps; j++)
       states(i,j) = psi(j,point(i));
   }
+
+  for(int j=0; j<no_of_sps; j++)
+      states.col(j) = states.col(j)/sqrt(states.col(j).unaryExpr(&Sqr).sum());
+
+  cout << "Initial Normalization= " << states.col(1).unaryExpr(&Sqr).sum() << endl;
 
   MatrixXcd H = MatrixXcd::Zero(point.size(),point.size());
   for(int i=0; i<point.size(); i++)
@@ -186,10 +161,16 @@ int main()
       H(i,i) = 1/(dx*dx)+ V(point(i));
   }
 
+
   VectorXcd v; MatrixXcd eigenvectors; VectorXd eigenvalues;
   int output_states = 2; int master_loop = 0;
   VectorXd oldeival= VectorXd::Zero(output_states);
   VectorXd neweival= VectorXd::Zero(output_states);
+  ofstream fout("initialstate.txt");
+   
+   for(int i=0; i<point.size(); i++) fout << point(i) << " " << (states(i,0)).real() << " " << (states(i,1)).real() << endl;
+   fout.close();
+
 
   for(; ; )
   {
@@ -206,16 +187,29 @@ int main()
     sort(eigenspectrum.begin(),eigenspectrum.end(),compare);
     eigenspectrum.resize(no_of_sps);
 
-    for(int i=0; i<no_of_sps; i++) states.col(i)= eigenspectrum[i].second;
-    for(int i=0; i<output_states; i++) neweival(i) = eigenspectrum[i].first;
-    cout << neweival.transpose() << endl;
+    for(int i=0; i<no_of_sps; i++) states.col(i)= eigenspectrum[i].second;   	
+    for(int i=0; i<output_states; i++) neweival(i) = eigenspectrum[i].first;    	
+    cout << "Eigenvalues are: " << neweival.transpose() << endl << endl;
+
     double max_deviation = (neweival - oldeival).cwiseAbs().maxCoeff();
-    if(max_deviation < 1e-4) break; else cout << "Deviation = " << max_deviation << endl;
+    if(max_deviation < maxdev) break; else cout << "Max deviation = " << max_deviation << endl;
 
     for(int i=0; i<point.size(); i++) {H(i,i) = 1/(dx*dx) + V(point(i)) + integrate_rho(point(i),&integrand); cout << i << '\r';}
     for(int i=0; i<oldeival.size(); i++) oldeival(i)= eigenspectrum[i].first;
-    master_loop++;
+    master_loop++; cout << endl;
   }
+
+  	  fout.open("finalstate.txt");
+  	  for(int i=0; i<point.size(); i++) fout << point(i) << " " << (states(i,0)).real()  << " " << (states(i,1)).real() << endl;
+  	  fout.close();
+
+  	cout << "Normalization\n";
+
+  	cout << sqrt(states.col(1).unaryExpr(&Sqr).sum()) << endl;
+
+  	fout.open("state.txt");
+  	fout << states.col(1) << endl;
+  	fout.close();
 }
 
 void show_time(milliseconds begin_ms, milliseconds end_ms)
