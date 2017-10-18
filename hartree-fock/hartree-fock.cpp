@@ -71,34 +71,21 @@ double hermite(int n, double y)
 
 double V(double x) {return 0.5*pow(omega*x,2);}
 
-double psi(int n, double x)
-{
-  n++;
-  if(abs(x)>1) return 0;
-  else return (n%2==0)? sqrt(2/a)*sin(n*M_PI*x/(2*a)):sqrt(2/a)*cos(n*M_PI*x/(2*a));
-}
-//
 // double psi(int n, double x)
 // {
-//   long double y = alpha*x;
-//   long double result = 1/sqrt(pow(2,n)*fac(n))*sqrt(alpha)/pow(M_PI,0.25)*exp(-y*y/2)*hermite(n,y);
-//   return result;
+//   n++;
+//   if(abs(x)>1) return 0;
+//   else return (n%2==0)? sqrt(2/a)*sin(n*M_PI*x/(2*a)):sqrt(2/a)*cos(n*M_PI*x/(2*a));
 // }
 
-bool compare(const pair<double, VectorXcd>&i, const pair<double, VectorXcd>&j) {return i.first < j.first;}
-
-double filter(double x) {if(abs(x)<1e-8) return 0.0; else return x;}
-
-VectorXcd filter(VectorXcd v)
+double psi(int n, double x)
 {
-  VectorXcd v_filtered(v.size());
-  for(int i=0; i<v.size(); i++)
-  {
-    v_filtered(i).real(filter(v(i).real()));
-    v_filtered(i).imag(filter(v(i).imag()));
-  }
-  return v_filtered;
+  long double y = alpha*x;
+  long double result = 1/sqrt(pow(2,n)*fac(n))*sqrt(alpha)/pow(M_PI,0.25)*exp(-y*y/2)*hermite(n,y);
+  return result;
 }
+
+bool compare(const pair<double, VectorXcd>&i, const pair<double, VectorXcd>&j) {return i.first < j.first;}
 
 double rho_H(double r_prime)
 {
@@ -106,7 +93,6 @@ double rho_H(double r_prime)
   double rho=0.0;
   for(int i=0; i< no_of_sps; i++)
   {
-    // cout << (states(n_prime,i)).real() << endl;
     rho += (conj(states(n_prime,i))*states(n_prime,i)).real();
   }          //phi_i*(r')phi_i(r')
   return rho;
@@ -123,8 +109,7 @@ double rho_HF(double r, double r_prime)
     for(int j=0; j< no_of_sps; j++)
     {
       num += (conj(states(n_prime,k))*states(n,k)*conj(states(n,j))*states(n_prime,j)).real();
-              //phi_k*(r')phi_k(r)phi_j*(r)phi_j(r')
-    }
+    }        //phi_k*(r')phi_k(r)phi_j*(r)phi_j(r')
   }
   denom = rho_H(r);
   if(denom != 0) return num/denom; else return 0.0;
@@ -132,20 +117,6 @@ double rho_HF(double r, double r_prime)
 
 double integrand(double r, double r_prime)
 {
-  // // cout << "integrand fn started.\n";
-  // double res;
-  //  if(r!=r_prime)
-  //  {
-  //   //  cout << "r=" << r << " r_prime=" << r_prime << endl;
-  //   //  cout << rho_H(r_prime)-rho_HF(r,r_prime) << " " << abs(r - r_prime) << " ";
-  //    res =  (rho_H(r_prime)-rho_HF(r,r_prime))/abs(r - r_prime);
-  //   //  cout << res << endl;
-  //  }
-  //  else
-  //  {//cout << "code red!\n";
-  //   res=0;
-  //  }
-  // // cout << "integrand fn ended\n";
   return (rho_H(r_prime)-rho_HF(r,r_prime))/(abs(r - r_prime)+1/(2.0*double(number_of_mesh)));
 }
 
@@ -155,10 +126,10 @@ double integrate_rho(double r, double (*func_x)(double, double))
   double fa, fb,x, step;
   int j;
   step=(up_lim - low_lim)/((double) number_of_mesh);
-  fa=(*func_x)(r,low_lim); //cout << "fa=" << fa << endl;
-  fb=(*func_x)(r,up_lim);  // cout << "fb=" << fb << endl;
+  fa=(*func_x)(r,low_lim);
+  fb=(*func_x)(r,up_lim);
   trapez_sum=0.;
-  for (j=1; j <= number_of_mesh-1; j++)
+  for (j=1; j < number_of_mesh; j++)
   {
     x=j*step+low_lim;
     trapez_sum+=(*func_x)(r,x);
@@ -170,8 +141,8 @@ double integrate_rho(double r, double (*func_x)(double, double))
 int main()
 {
 
-  double maxdev;
-  cout << "Enter tolerance: "; cin >> maxdev;
+  double tolerance;
+  cout << "Enter tolerance: "; cin >> tolerance;
 
   for(int i=0; i<= no_of_pts; i++) {point(i)=low_lim+i*dx;}
   for(int i=0; i< point.size(); i++)
@@ -183,19 +154,6 @@ int main()
   for(int j=0; j<no_of_sps; j++)
       states.col(j) = states.col(j)/sqrt(states.col(j).unaryExpr(&Sqr).sum());
 
-  //  cout << "Initial Normalization= " << states.col(1).unaryExpr(&Sqr).sum() << endl;
-
-
-  int userpt, userpt_prime; //r=point(userpt); r_prime= point(userpt_prime)
-
-  // while(1==1)
-  // {
-  //   cin >> userpt >> userpt_prime;
-  //   cout << "r=" << point(userpt) << " r_prime=" << point(userpt_prime) << endl << endl;
-  //   cout << rho_H(point(userpt_prime)) << " " << rho_HF(point(userpt),point(userpt_prime))  << " " << integrate_rho(point(userpt),&integrand) << endl;
-  // }
-  // exit(1);
-
   MatrixXcd H = MatrixXcd::Zero(point.size(),point.size());
   for(int i=0; i<point.size(); i++)
   {
@@ -205,32 +163,25 @@ int main()
       H(i,i) = 1/(dx*dx)+ V(point(i))+ integrate_rho(point(i),&integrand);
   }
 
-
   VectorXcd v; MatrixXcd eigenvectors; VectorXd eigenvalues;
-  int output_states = 2; int master_loop = 0;
+  int output_states = 2; int master_loop = 1;
   VectorXd oldeival= VectorXd::Zero(output_states);
   VectorXd neweival= VectorXd::Zero(output_states);
 
-  // for(int i=0; i<point.size(); i++)
-  // {
-  //   for(int j=0; j<point.size(); j++)
-  //     // cout << filter(integrand(point(i),point(j))) << " ";
-  //     cout << rho_H(point(j));
-  //   cout << endl;
-  // }
-
-
    ofstream fout("initialstate.txt");
-   for(int i=0; i<point.size(); i++) fout << point(i) << " " << (states(i,0)).real() << " " << (states(i,1)).real() << endl;
+   for(int i=0; i<point.size(); i++)
+   {
+     fout << point(i) << " ";
+     for(int j=0; j<no_of_sps; j++) fout << (states(i,j)).real() << " ";
+     fout << endl;
+   }
    fout.close();
 
-
-  //  exit(1);
+   cout.precision(8);
 
   for(; ; )
   {
     cout << "Loop-" << master_loop << "\n============================\n";
-
 
     milliseconds begin_ms = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
     cEP(H,v,eigenvectors);
@@ -240,7 +191,7 @@ int main()
     eigenvalues = v.real();
     vector < pair<double,VectorXcd> > eigenspectrum;
     for(int i=0; i<point.size(); i++)
-      eigenspectrum.push_back(make_pair(filter(eigenvalues(i)),filter(eigenvectors.col(i))));
+      eigenspectrum.push_back(make_pair(eigenvalues(i),eigenvectors.col(i)));
     sort(eigenspectrum.begin(),eigenspectrum.end(),compare);
     eigenspectrum.resize(no_of_sps);
 
@@ -248,31 +199,38 @@ int main()
     for(int i=0; i<output_states; i++) neweival(i) = eigenspectrum[i].first;
     cout << "Eigenvalues are: " << neweival.transpose() << endl << endl;
 
-    double max_deviation = (neweival - oldeival).cwiseAbs().maxCoeff();
-    if(max_deviation < maxdev) break;// else cout << "Max deviation = " << max_deviation << endl;
+
 
     string filename = "data"+to_string(master_loop)+".txt";
     fout.open(filename);
-    for(int i=0; i<point.size(); i++) fout << point(i) << " " << (states(i,0)).real()  << " " << (states(i,1)).real() << endl;
+    for(int i=0; i<point.size(); i++)
+    {
+      fout << point(i) << " ";
+      for(int j=0; j<no_of_sps; j++) fout << (states(i,j)).real() << " ";
+      fout << endl;
+    }
     fout.close();
 
-    for(int i=0; i<point.size(); i++) {H(i,i) = 1/(dx*dx) + V(point(i)) + integrate_rho(point(i),&integrand); cout << i << '\r';}
+    cout << "Normalization check: " << endl;
+    for(int i=0; i< states.cols(); i++)
+  	cout << "Column-" << i << " Normalization=" << sqrt(states.col(i).unaryExpr(&Sqr).sum()) << endl;
+
+    double max_deviation = (neweival - oldeival).cwiseAbs().maxCoeff();
+    if(max_deviation < tolerance) break;
+
+    for(int i=0; i<point.size(); i++) {H(i,i) = 1/(dx*dx) + V(point(i)) + integrate_rho(point(i),&integrand);}
     for(int i=0; i<oldeival.size(); i++) oldeival(i)= eigenspectrum[i].first;
     master_loop++; cout << endl;
   }
 
-  	  fout.open("finalstate.txt");
-  	  for(int i=0; i<point.size(); i++) fout << point(i) << " " << (states(i,0)).real()  << " " << (states(i,1)).real() << endl;
-  	  fout.close();
+  	  // fout.open("finalstate.txt");
+  	  // for(int i=0; i<point.size(); i++) fout << point(i) << " " << (states(i,0)).real()  << " " << (states(i,1)).real() << endl;
+  	  // fout.close();
 
-    cout.precision(10);
 
-  	cout << "Final Normalization= ";
-  	cout << sqrt(states.col(1).unaryExpr(&Sqr).sum()) << endl;
-
-  	fout.open("state.txt");
-  	fout << states.col(1) << endl;
-  	fout.close();
+  	// cout << "Final Normalization: " << endl;
+    // for(int i=0; i< states.cols(); i++)
+  	// cout << "Column-" << i << " Normalization=" << sqrt(states.col(i).unaryExpr(&Sqr).sum()) << endl;
 }
 
 void show_time(milliseconds begin_ms, milliseconds end_ms)
