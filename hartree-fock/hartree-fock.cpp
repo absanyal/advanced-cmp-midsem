@@ -6,6 +6,7 @@
 #include <cmath>
 #include <fstream>
 #include <chrono>
+#include <string>
 #include <Eigen/Dense>
 #include <lapacke.h>
 
@@ -44,22 +45,20 @@ bool cEP(MatrixXcd A, VectorXcd& lambda, MatrixXcd& v)
 }
 
 
-int no_of_pts=1000;
+int no_of_pts=500;
 const int number_of_mesh=100;
-const double a = 1;
-double low_lim = -8;
-double up_lim = 8;
+const double a = 1.0;
+double low_lim = -6.0;
+double up_lim = 6.0;
 double dx = (up_lim - low_lim)/double(no_of_pts);
-const double omega=1;
+const double omega=1.0;
 double alpha = 1/sqrt(omega);
-const int no_of_sps = 10;
+const int no_of_sps = 3;
 VectorXd point(no_of_pts+1);
 MatrixXcd states(point.size(),no_of_sps);
 
 void show_time(milliseconds begin_ms, milliseconds end_ms);
 double fac(int n) {double prod=1.0; for(int i=n; i>1;i--) prod*=n; return prod;}
-double V(double x) {return 0.5*pow(omega*x,2);}
-
 double hermite(int n, double y)
 {
     double x_vec[1];
@@ -69,8 +68,16 @@ double hermite(int n, double y)
     return fx2;
 }
 
+double V(double x) {return 0.5*pow(omega*x,2);}
 
-long double psi(int n, double x)
+// double psi(int n, double x)
+// {
+//   n++;
+//   if(abs(x)>1) return 0;
+//   else return (n%2==0)? sqrt(2/a)*sin(n*M_PI*x/(2*a)):sqrt(2/a)*cos(n*M_PI*x/(2*a));
+// }
+
+double psi(int n, double x)
 {
   long double y = alpha*x;
   long double result = 1/sqrt(pow(2,n)*fac(n))*sqrt(alpha)/pow(M_PI,0.25)*exp(-y*y/2)*hermite(n,y);
@@ -79,7 +86,7 @@ long double psi(int n, double x)
 
 bool compare(const pair<double, VectorXcd>&i, const pair<double, VectorXcd>&j) {return i.first < j.first;}
 
-double filter(double x) {if(abs(x)<1e-3) return 0.0; else return x;}
+double filter(double x) {if(abs(x)<1e-8) return 0.0; else return x;}
 
 VectorXcd filter(VectorXcd v)
 {
@@ -92,9 +99,9 @@ VectorXcd filter(VectorXcd v)
   return v_filtered;
 }
 
-double rho_H(double r)
+double rho_H(double r_prime)
 {
-  int n = int((r - low_lim)/dx);
+  int n = int((r_prime - low_lim)/dx);
   double rho=0.0;
   for(int i=0; i< no_of_sps; i++)
   {
@@ -109,21 +116,36 @@ double rho_HF(double r, double r_prime)
   int n = (r - low_lim)/dx;
   int n_prime = (r_prime - low_lim)/dx;
 
-  for(int i=0; i< no_of_sps; i++)
+  for(int k=0; k< no_of_sps; k++)
   {
     for(int j=0; j< no_of_sps; j++)
     {
-      num += (conj(states(n,i))*states(n,i)*conj(states(n_prime,j))*states(n_prime,j)).real();
+      num += (conj(states(n_prime,k))*states(n,k)*conj(states(n,j))*states(n_prime,j)).real();
+              //phi_k*(r')phi_k(r)phi_j*(r)phi_j(r')
     }
-    denom += (conj(states(n,i))*states(n,i)).real();
   }
+  denom = rho_H(r);
   if(denom != 0) return num/denom; else return 0.0;
 }
 
 double integrand(double r, double r_prime)
 {
-   if(r!=r_prime) return (rho_H(r_prime)*rho_HF(r,r_prime))/abs(r - r_prime); else return 0.0;
- }
+  // cout << "integrand fn started.\n";
+  double res;
+   if(r!=r_prime)
+   {
+    //  cout << "r=" << r << " r_prime=" << r_prime << endl;
+    //  cout << rho_H(r_prime)-rho_HF(r,r_prime) << " " << abs(r - r_prime) << " ";
+     res =  (rho_H(r_prime)-rho_HF(r,r_prime))/abs(r - r_prime);
+    //  cout << res << endl;
+   }
+   else
+   {//cout << "code red!\n";
+    res=0;
+   }
+  // cout << "integrand fn ended\n";
+  return res;
+}
 
 double integrate_rho(double r, double (*func_x)(double, double))
 {
@@ -145,9 +167,9 @@ double integrate_rho(double r, double (*func_x)(double, double))
 
 int main()
 {
- 	
+
   double maxdev;
-  cout << "Enter tolerance: "; cin >> maxdev; 
+  cout << "Enter tolerance: "; cin >> maxdev;
 
 
   for(int i=0; i<= no_of_pts; i++) {point(i)=low_lim+i*dx;}
@@ -162,13 +184,21 @@ int main()
 
   cout << "Initial Normalization= " << states.col(1).unaryExpr(&Sqr).sum() << endl;
 
+
+  // int userpt, userpt2; //r=point(userpt); r_prime= point(userpt2)
+  // cin >> userpt >> userpt2;
+  // cout << "r=" << point(userpt) << " r_prime=" << point(userpt2) << endl << endl;
+  // cout << rho_H(point(userpt2)) << " " << rho_HF(point(userpt),point(userpt2))  << " " << integrand(point(userpt),point(userpt2)) << endl;
+  //
+  // exit(1);
+
   MatrixXcd H = MatrixXcd::Zero(point.size(),point.size());
   for(int i=0; i<point.size(); i++)
   {
       int j = (i==point.size()-1)? 0 : i+1;
       H(i,j)= -1/(2*dx*dx);
       H(j,i)= -1/(2*dx*dx);
-      H(i,i) = 1/(dx*dx)+ V(point(i));
+      H(i,i) = 1/(dx*dx)+ V(point(i))+ integrate_rho(point(i),&integrand);
   }
 
 
@@ -176,10 +206,22 @@ int main()
   int output_states = 2; int master_loop = 0;
   VectorXd oldeival= VectorXd::Zero(output_states);
   VectorXd neweival= VectorXd::Zero(output_states);
-  ofstream fout("initialstate.txt");
-   
+
+
+  // for(int i=0; i<point.size(); i++)
+  // {
+  //   for(int j=0; j<point.size(); j++)
+  //     // cout << filter(integrand(point(i),point(j))) << " ";
+  //     cout << rho_H(point(j));
+  //   cout << endl;
+  // }
+
+
+
+   ofstream fout("initialstate.txt");
    for(int i=0; i<point.size(); i++) fout << point(i) << " " << (states(i,0)).real() << " " << (states(i,1)).real() << endl;
    fout.close();
+
 
 
   for(; ; )
@@ -197,12 +239,17 @@ int main()
     sort(eigenspectrum.begin(),eigenspectrum.end(),compare);
     eigenspectrum.resize(no_of_sps);
 
-    for(int i=0; i<no_of_sps; i++) states.col(i)= eigenspectrum[i].second;   	
-    for(int i=0; i<output_states; i++) neweival(i) = eigenspectrum[i].first;    	
+    for(int i=0; i<no_of_sps; i++) states.col(i)= eigenspectrum[i].second;
+    for(int i=0; i<output_states; i++) neweival(i) = eigenspectrum[i].first;
     cout << "Eigenvalues are: " << neweival.transpose() << endl << endl;
 
     double max_deviation = (neweival - oldeival).cwiseAbs().maxCoeff();
-    if(max_deviation < maxdev) break; else cout << "Max deviation = " << max_deviation << endl;
+    if(max_deviation < maxdev) break;// else cout << "Max deviation = " << max_deviation << endl;
+
+    string filename = "data"+to_string(master_loop)+".txt";
+    fout.open(filename);
+    for(int i=0; i<point.size(); i++) fout << point(i) << " " << (states(i,0)).real()  << " " << (states(i,1)).real() << endl;
+    fout.close();
 
     for(int i=0; i<point.size(); i++) {H(i,i) = 1/(dx*dx) + V(point(i)) + integrate_rho(point(i),&integrand); cout << i << '\r';}
     for(int i=0; i<oldeival.size(); i++) oldeival(i)= eigenspectrum[i].first;
@@ -213,8 +260,9 @@ int main()
   	  for(int i=0; i<point.size(); i++) fout << point(i) << " " << (states(i,0)).real()  << " " << (states(i,1)).real() << endl;
   	  fout.close();
 
-  	cout << "Normalization\n";
+    cout.precision(10);
 
+  	cout << "Final Normalization= ";
   	cout << sqrt(states.col(1).unaryExpr(&Sqr).sum()) << endl;
 
   	fout.open("state.txt");

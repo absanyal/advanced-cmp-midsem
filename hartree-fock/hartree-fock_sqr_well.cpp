@@ -43,11 +43,11 @@ bool cEP(MatrixXcd A, VectorXcd& lambda, MatrixXcd& v)
 }
 
 
-int no_of_pts=500;
+int no_of_pts=1000;
 const int number_of_mesh=100;
 const double sqr_low_lim = -1.0;
-const double sqr_up_lim = 1.0;
-double a = sqr_up_lim - sqr_low_lim;
+double sqr_up_lim = -sqr_low_lim;
+double a = 0.5*(sqr_up_lim - sqr_low_lim);
 
 double low_lim = -3.0;
 double up_lim = +3.0;
@@ -61,15 +61,16 @@ void show_time(milliseconds begin_ms, milliseconds end_ms);
 
 double V(double x) {return (abs(x)<1)? 0.0: 1000.0;}
 
-long double psi(int n, double x)
+double psi(int n, double x)
 {
+  n++;
   if(abs(x)>1) return 0;
   else return (n%2==0)? sqrt(2/a)*sin(n*M_PI*x/(2*a)):sqrt(2/a)*cos(n*M_PI*x/(2*a));
 }
 
 bool compare(const pair<double, VectorXcd>&i, const pair<double, VectorXcd>&j) {return i.first < j.first;}
 
-double filter(double x) {if(abs(x)<1e-3) return 0.0; else return x;}
+double filter(double x) {if(abs(x)<1e-8) return 0.0; else return x;}
 
 VectorXcd filter(VectorXcd v)
 {
@@ -82,14 +83,15 @@ VectorXcd filter(VectorXcd v)
   return v_filtered;
 }
 
-double rho_H(double r)
+double rho_H(double r_prime)
 {
-  int n = int((r - low_lim)/dx);
+  int n_prime = int((r_prime - low_lim)/dx);
   double rho=0.0;
   for(int i=0; i< no_of_sps; i++)
   {
-    rho += (conj(states(n,i))*states(n,i)).real();
-  }
+    // cout << (states(n_prime,i)).real() << endl;
+    rho += (conj(states(n_prime,i))*states(n_prime,i)).real();
+  }          //phi_i*(r')phi_i(r')
   return rho;
 }
 
@@ -99,21 +101,22 @@ double rho_HF(double r, double r_prime)
   int n = (r - low_lim)/dx;
   int n_prime = (r_prime - low_lim)/dx;
 
-  for(int i=0; i< no_of_sps; i++)
+  for(int k=0; k< no_of_sps; k++)
   {
     for(int j=0; j< no_of_sps; j++)
     {
-      num += (conj(states(n,i))*states(n,i)*conj(states(n_prime,j))*states(n_prime,j)).real();
+      num += (conj(states(n_prime,k))*states(n,k)*conj(states(n,j))*states(n_prime,j)).real();
+              //phi_k*(r')phi_k(r)phi_j*(r)phi_j(r')
     }
-    denom += (conj(states(n,i))*states(n,i)).real();
   }
+  denom = rho_H(r);
   if(denom != 0) return num/denom; else return 0.0;
 }
 
 double integrand(double r, double r_prime)
 {
-   if(r!=r_prime) return (rho_H(r_prime)*rho_HF(r,r_prime))/abs(r - r_prime); else return 0.0;
- }
+  return (rho_H(r_prime)-rho_HF(r,r_prime))/(abs(r - r_prime)+1/(2.0*double(number_of_mesh)));
+}
 
 double integrate_rho(double r, double (*func_x)(double, double))
 {
@@ -135,9 +138,9 @@ double integrate_rho(double r, double (*func_x)(double, double))
 
 int main()
 {
- 	
+
   double maxdev;
-  cout << "Enter tolerance: "; cin >> maxdev; 
+  cout << "Enter tolerance: "; cin >> maxdev;
 
 
   for(int i=0; i<= no_of_pts; i++) {point(i)=low_lim+i*dx;}
@@ -161,13 +164,21 @@ int main()
       H(i,i) = 1/(dx*dx)+ V(point(i));
   }
 
-
   VectorXcd v; MatrixXcd eigenvectors; VectorXd eigenvalues;
+
+  // cout << "The Hamiltonian is:" << '\n' << H.real() << endl << endl;
+  // cEP(H,v,eigenvectors);
+  // eigenvalues = v.real(); sort(eigenvalues.data(),eigenvalues.data()+eigenvalues.size());
+  // cout << eigenvalues.transpose() << endl << endl;
+  // exit(1);
+
+
+
   int output_states = 2; int master_loop = 0;
   VectorXd oldeival= VectorXd::Zero(output_states);
   VectorXd neweival= VectorXd::Zero(output_states);
   ofstream fout("initialstate.txt");
-   
+
    for(int i=0; i<point.size(); i++) fout << point(i) << " " << (states(i,0)).real() << " " << (states(i,1)).real() << endl;
    fout.close();
 
@@ -187,8 +198,8 @@ int main()
     sort(eigenspectrum.begin(),eigenspectrum.end(),compare);
     eigenspectrum.resize(no_of_sps);
 
-    for(int i=0; i<no_of_sps; i++) states.col(i)= eigenspectrum[i].second;   	
-    for(int i=0; i<output_states; i++) neweival(i) = eigenspectrum[i].first;    	
+    for(int i=0; i<no_of_sps; i++) states.col(i)= eigenspectrum[i].second;
+    for(int i=0; i<output_states; i++) neweival(i) = eigenspectrum[i].first;
     cout << "Eigenvalues are: " << neweival.transpose() << endl << endl;
 
     double max_deviation = (neweival - oldeival).cwiseAbs().maxCoeff();

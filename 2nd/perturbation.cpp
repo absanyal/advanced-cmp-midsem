@@ -62,14 +62,16 @@ int main()
   // cout << "Enter omega:";
   // cin >> omega;
 
-  ofstream fout("perturbtion_data.txt");
+  // ofstream fout("perturbtion_data.txt");
 
-  for(omega=0.01; omega <3.0; omega+= 0.01)
-  {
-    alpha = sqrt(omega);
-    double res= integrate_y_perturbation(&integrand_y_perturbation);
-    fout << omega << " " << res << endl;
-    cout << omega << endl;
-  }
+  // for(omega=0.01; omega <3.0; omega+= 0.01)
+  // {
+  //   alpha = sqrt(omega);
+  //   double res= integrate_y_perturbation(&integrand_y_perturbation);
+  //   fout << omega << " " << res << endl;
+  //   cout << omega << endl;
+  // }
+
+  
 
 }
