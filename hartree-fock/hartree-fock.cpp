@@ -20,6 +20,34 @@ typedef std::complex <double> cd;
 
 double Sqr(cd x){return (x*conj(x)).real();}
 
+bool cEPpro(MatrixXcd Ac, VectorXcd& lambdac, MatrixXcd& vc)
+{
+  int N;
+  if(Ac.cols()==Ac.rows())  N = Ac.cols(); else return false;
+
+  MatrixXd A = Ac.real();
+  lambdac.resize(N);
+  vc.resize(N,N);
+  VectorXd lambda = lambdac.real();
+
+  int LDA = A.outerStride();
+  int INFO = 0;
+  char Uchar = 'U';
+  char Vchar = 'V';
+
+  int LWORK = 5*(2*LDA*LDA+6*LDA+1);
+  int LIWORK = 5*(3+5*LDA);
+
+  VectorXd WORK(LWORK);
+  VectorXi IWORK(IWORK);
+
+  dsyevd_(&Vchar, &Uchar, &N, A.data(), &LDA, lambda.data(),  WORK.data(), &LWORK, IWORK.data(), &LIWORK, &INFO);
+  vc.real() = A;
+  lambdac.real() = lambda;
+
+  return INFO==0;
+}
+
 bool cEP(MatrixXcd A, VectorXcd& lambda, MatrixXcd& v)
 {
   int N = A.cols();
@@ -184,7 +212,7 @@ int main()
     cout << "Loop-" << master_loop << "\n============================\n";
 
     milliseconds begin_ms = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
-    cEP(H,v,eigenvectors);
+    cEPpro(H,v,eigenvectors);
     milliseconds end_ms = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
     show_time(begin_ms, end_ms);
 
