@@ -126,7 +126,20 @@ double rho_H(double r_prime)
   return rho;
 }
 
-double rho_HF(double r, double r_prime)
+double rho_HF(int n , int n_prime, int j)
+{
+  double num=0.0; double denom=0.0;
+
+  for(int k=0; k< no_of_sps; k++)
+  {
+    num += (conj(states(n_prime,k))*states(n_prime,j)*conj(states(n,j))*states(n,k)).real();
+           //phi_k*(r')phi_j(r')phi_j*(r)phi_k(r)
+  }
+  denom = (states(n,j)*conj(states(n,j))).real();
+  if(denom != 0) return num/denom; else return 0.0;
+}
+
+double rho_HF(double r, double r_prime, int j)
 {
   double num=0.0; double denom=0.0;
   int n = (r - low_lim)/dx;
@@ -134,33 +147,30 @@ double rho_HF(double r, double r_prime)
 
   for(int k=0; k< no_of_sps; k++)
   {
-    for(int j=0; j< no_of_sps; j++)
-    {
-      num += (conj(states(n_prime,k))*states(n,k)*conj(states(n,j))*states(n_prime,j)).real();
-    }        //phi_k*(r')phi_k(r)phi_j*(r)phi_j(r')
+    num += (conj(states(n_prime,k))*states(n_prime,j)*conj(states(n,j))*states(n,k)).real();
+           //phi_k*(r')phi_j(r')phi_j*(r)phi_k(r)
   }
-  denom = rho_H(r);
+  denom = (states(n,j)*conj(states(n,j))).real();
   if(denom != 0) return num/denom; else return 0.0;
 }
 
-double integrand(double r, double r_prime)
+double integrand(double r, double r_prime, int j)
 {
-  return (rho_H(r_prime)-rho_HF(r,r_prime))/(abs(r - r_prime)+1/(2.0*double(number_of_mesh)));
+  return (rho_H(r_prime)-rho_HF(r,r_prime,j))/(abs(r - r_prime)+1/(2.0*double(number_of_mesh)));
 }
 
-double integrate_rho(double r, double (*func_x)(double, double))
+double integrate_rho(double r, int j, double (*func_x)(double, double, int)) //func_x=integrand
 {
   double trapez_sum;
   double fa, fb,x, step;
-  int j;
   step=(up_lim - low_lim)/((double) number_of_mesh);
-  fa=(*func_x)(r,low_lim);
-  fb=(*func_x)(r,up_lim);
+  fa=(*func_x)(r,low_lim,j);
+  fb=(*func_x)(r,up_lim,j);
   trapez_sum=0.;
-  for (j=1; j < number_of_mesh; j++)
+  for (int k=1; k < number_of_mesh; k++)
   {
     x=j*step+low_lim;
-    trapez_sum+=(*func_x)(r,x);
+    trapez_sum+=(*func_x)(r,x,j);
   }
   trapez_sum=(trapez_sum+fb+fa)*step;
   return trapez_sum;
@@ -188,15 +198,15 @@ int main()
       int j = (i==point.size()-1)? 0 : i+1;
       H(i,j)= -1/(2*dx*dx);
       H(j,i)= -1/(2*dx*dx);
-      H(i,i) = 1/(dx*dx)+ V(point(i))+ integrate_rho(point(i),&integrand);
   }
 
   VectorXcd v; MatrixXcd eigenvectors; VectorXd eigenvalues;
-  int output_states = 2; int master_loop = 1;
-  VectorXd oldeival= VectorXd::Zero(output_states);
-  VectorXd neweival= VectorXd::Zero(output_states);
+  int master_loop = 1;
+  VectorXd oldeival= VectorXd::Zero(no_of_sps);
+  VectorXd neweival= VectorXd::Zero(no_of_sps);
+  vector < pair<double,VectorXcd> > selected_spectrum;
 
-   ofstream fout("initialstate.txt");
+   ofstream fout("data/initialstate.txt");
    for(int i=0; i<point.size(); i++)
    {
      fout << point(i) << " ";
@@ -207,29 +217,41 @@ int main()
 
    cout.precision(8);
 
+  //  int n, n_prime;
+  //  while(1==1)
+  // { cin >> n >> n_prime;
+  //  for(int j=0; j<no_of_sps; j++) cout << rho_HF(n,n_prime,j) << endl;}
+  //  exit(1);
+
   for(; ; )
   {
     cout << "Loop-" << master_loop << "\n============================\n";
 
-    milliseconds begin_ms = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
-    diagonalize(H,v,eigenvectors);
-    milliseconds end_ms = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
-    show_time(begin_ms, end_ms);
+    for(int j=0; j<no_of_sps; j++)
+      {
+        for(int i=0; i<point.size(); i++)
+          H(i,i) = 1/(dx*dx)+ V(point(i))+ integrate_rho(point(i),j,&integrand);
 
-    eigenvalues = v.real();
-    vector < pair<double,VectorXcd> > eigenspectrum;
-    for(int i=0; i<point.size(); i++)
-      eigenspectrum.push_back(make_pair(eigenvalues(i),eigenvectors.col(i)));
-    sort(eigenspectrum.begin(),eigenspectrum.end(),compare);
-    eigenspectrum.resize(no_of_sps);
+        milliseconds begin_ms = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
+        diagonalize(H,v,eigenvectors); eigenvalues = v.real();
+        milliseconds end_ms = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
+        show_time(begin_ms,end_ms);
 
-    for(int i=0; i<no_of_sps; i++) states.col(i)= eigenspectrum[i].second;
-    for(int i=0; i<output_states; i++) neweival(i) = eigenspectrum[i].first;
+        vector < pair<double,VectorXcd> > eigenspectrum;
+        for(int k=0; k<point.size(); k++) eigenspectrum.push_back(make_pair(eigenvalues(k),eigenvectors.col(k)));
+
+        sort(eigenspectrum.begin(),eigenspectrum.end(),compare);
+        selected_spectrum.push_back(eigenspectrum.at(j));
+        eigenspectrum.clear();
+      }
+
+
+    for(int i=0; i<no_of_sps; i++) states.col(i)= selected_spectrum.at(i).second;
+    oldeival = neweival;
+    for(int i=0; i<neweival.size(); i++) neweival(i) = selected_spectrum.at(i).first;
     cout << "Eigenvalues are: " << neweival.transpose() << endl << endl;
 
-
-
-    string filename = "data"+to_string(master_loop)+".txt";
+    string filename = "data/loop"+to_string(master_loop)+".txt";
     fout.open(filename);
     for(int i=0; i<point.size(); i++)
     {
@@ -239,22 +261,16 @@ int main()
     }
     fout.close();
 
-    cout << "Normalization check: " << endl;
-    for(int i=0; i< states.cols(); i++)
-  	cout << "Column-" << i << " Normalization=" << sqrt(states.col(i).unaryExpr(&Sqr).sum()) << endl;
+    // cout << "Normalization check: " << endl;
+    // for(int i=0; i< states.cols(); i++)
+  	// cout << "Column-" << i << " Normalization=" << sqrt(states.col(i).unaryExpr(&Sqr).sum()) << endl;
 
     double max_deviation = (neweival - oldeival).cwiseAbs().maxCoeff();
     if(max_deviation < tolerance) break;
 
-    for(int i=0; i<point.size(); i++) {H(i,i) = 1/(dx*dx) + V(point(i)) + integrate_rho(point(i),&integrand);}
-    for(int i=0; i<oldeival.size(); i++) oldeival(i)= eigenspectrum[i].first;
+    selected_spectrum.clear();
     master_loop++; cout << endl;
   }
-
-  	  // fout.open("finalstate.txt");
-  	  // for(int i=0; i<point.size(); i++) fout << point(i) << " " << (states(i,0)).real()  << " " << (states(i,1)).real() << endl;
-  	  // fout.close();
-
 
   	// cout << "Final Normalization: " << endl;
     // for(int i=0; i< states.cols(); i++)

@@ -17,6 +17,34 @@ typedef std::complex <double> cd;
 
 double Sqr(cd x){return (x*conj(x)).real();}
 
+bool cEPpro(MatrixXcd Ac, VectorXcd& lambdac, MatrixXcd& vc)
+{
+  int N;
+  if(Ac.cols()==Ac.rows())  N = Ac.cols(); else return false;
+
+  MatrixXd A = Ac.real();
+  lambdac.resize(N);
+  vc.resize(N,N);
+  VectorXd lambda = lambdac.real();
+
+  int LDA = A.outerStride();
+  int INFO = 0;
+  char Uchar = 'U';
+  char Vchar = 'V';
+
+  int LWORK = 5*(2*LDA*LDA+6*LDA+1);
+  int LIWORK = 5*(3+5*LDA);
+
+  VectorXd WORK(LWORK);
+  VectorXi IWORK(IWORK);
+
+  dsyevd_(&Vchar, &Uchar, &N, A.data(), &LDA, lambda.data(),  WORK.data(), &LWORK, IWORK.data(), &LIWORK, &INFO);
+  vc.real() = A;
+  lambdac.real() = lambda;
+
+  return INFO==0;
+}
+
 bool cEP(MatrixXcd A, VectorXcd& lambda, MatrixXcd& v)
 {
   int N = A.cols();
@@ -166,28 +194,19 @@ int main()
 
   VectorXcd v; MatrixXcd eigenvectors; VectorXd eigenvalues;
 
-  // cout << "The Hamiltonian is:" << '\n' << H.real() << endl << endl;
-  // cEP(H,v,eigenvectors);
-  // eigenvalues = v.real(); sort(eigenvalues.data(),eigenvalues.data()+eigenvalues.size());
-  // cout << eigenvalues.transpose() << endl << endl;
-  // exit(1);
-
-
-
   int output_states = 2; int master_loop = 0;
   VectorXd oldeival= VectorXd::Zero(output_states);
   VectorXd neweival= VectorXd::Zero(output_states);
   ofstream fout("initialstate.txt");
 
-   for(int i=0; i<point.size(); i++) fout << point(i) << " " << (states(i,0)).real() << " " << (states(i,1)).real() << endl;
-   fout.close();
-
+  for(int i=0; i<point.size(); i++) fout << point(i) << " " << (states(i,0)).real() << " " << (states(i,1)).real() << endl;
+  fout.close();
 
   for(; ; )
   {
     cout << "Loop-" << master_loop << "\n============================\n";
     milliseconds begin_ms = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
-    cEP(H,v,eigenvectors);
+    cEPpro(H,v,eigenvectors);
     milliseconds end_ms = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
     show_time(begin_ms, end_ms);
 
@@ -215,12 +234,7 @@ int main()
   	  fout.close();
 
   	cout << "Normalization\n";
-
   	cout << sqrt(states.col(1).unaryExpr(&Sqr).sum()) << endl;
-
-  	fout.open("state.txt");
-  	fout << states.col(1) << endl;
-  	fout.close();
 }
 
 void show_time(milliseconds begin_ms, milliseconds end_ms)
