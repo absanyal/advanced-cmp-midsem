@@ -1,3 +1,26 @@
+/*
+ * lib_harmonic.cpp
+ *
+ * Copyright 2017 Bineet Dash <bineet@bineet-ubuntu>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA 02110-1301, USA.
+ *
+ *
+ */
+
 #include <iostream>
 #include <cmath>
 #include <fstream>
@@ -64,7 +87,7 @@ double v_d(double y, int l, int p, int n, int q)
 double v_ex(double y, int l, int p, int n, int q)
 {  cout << "Enter omega:";
   cin >> omega;
-  alpha = sqrt(omega); 
+  alpha = sqrt(omega);
   double integrated_x = integrate_x(y, &v_x, l, q);
   return integrated_x*psi(p,y)*psi(n,y);
 }
